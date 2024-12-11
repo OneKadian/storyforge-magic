@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FormData {
   maleLead: {
@@ -25,6 +26,7 @@ interface FormData {
 const StoryForm = () => {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     maleLead: {
       name: '',
@@ -61,7 +63,9 @@ const StoryForm = () => {
     
     // Validate form
     const isValid = Object.values(formData).every(category => 
-      Object.values(category).every(value => value.trim() !== '')
+      Object.values(category).every(value => 
+        typeof value === 'string' && value.trim() !== ''
+      )
     );
 
     if (!isValid) {
@@ -73,13 +77,37 @@ const StoryForm = () => {
       return;
     }
 
+    setIsLoading(true);
     toast({
-      title: "Success!",
-      description: "Your story is being generated...",
+      title: "Creating your story...",
+      description: "This might take a minute or two.",
     });
 
-    // Here you would typically make an API call to your AI service
-    console.log('Form submitted:', formData);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-story', {
+        body: { formData }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Your story has been created.",
+      });
+
+      // Here you could redirect to a page showing the generated story
+      console.log('Generated story:', data.story);
+
+    } catch (error) {
+      console.error('Error generating story:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate story. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const nextStep = () => {
@@ -244,9 +272,10 @@ const StoryForm = () => {
           ) : (
             <button
               type="submit"
-              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors ml-auto"
+              disabled={isLoading}
+              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors ml-auto disabled:opacity-50"
             >
-              Create Story
+              {isLoading ? "Creating Story..." : "Create Story"}
             </button>
           )}
         </div>
