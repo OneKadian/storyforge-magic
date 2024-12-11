@@ -1,105 +1,78 @@
-import { useState } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-interface FormData {
-  maleLead: {
-    name: string;
-    personality: string;
-    appearance: string;
-    job: string;
-  };
-  femaleLead: {
-    name: string;
-    personality: string;
-    appearance: string;
-  };
-  story: {
-    plot: string;
-    fantasy: string;
-    genre: string;
-    length: string;
-    title: string;
-  };
-}
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const StoryForm = () => {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    maleLead: {
-      name: '',
-      personality: '',
-      appearance: '',
-      job: '',
-    },
-    femaleLead: {
-      name: '',
-      personality: '',
-      appearance: '',
-    },
-    story: {
-      plot: '',
-      fantasy: '',
-      genre: '',
-      length: '',
-      title: '',
-    },
-  });
-
-  const handleInputChange = (category: keyof FormData, field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [field]: value,
-      },
-    }));
-  };
+  const [maleLeadName, setMaleLeadName] = useState("");
+  const [maleLeadPersonality, setMaleLeadPersonality] = useState("");
+  const [maleLeadAppearance, setMaleLeadAppearance] = useState("");
+  const [maleLeadJob, setMaleLeadJob] = useState("");
+  const [femaleLeadName, setFemaleLeadName] = useState("");
+  const [femaleLeadPersonality, setFemaleLeadPersonality] = useState("");
+  const [femaleLeadAppearance, setFemaleLeadAppearance] = useState("");
+  const [femaleLeadJob, setFemaleLeadJob] = useState("");
+  const [storyPlot, setStoryPlot] = useState("");
+  const [storyFantasies, setStoryFantasies] = useState("");
+  const [storyGenre, setStoryGenre] = useState("");
+  const [chapterLength, setChapterLength] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form
-    const isValid = Object.values(formData).every(category => 
-      Object.values(category).every(value => 
-        typeof value === 'string' && value.trim() !== ''
-      )
-    );
-
-    if (!isValid) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
-    toast({
-      title: "Creating your story...",
-      description: "This might take a minute or two.",
-    });
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-story', {
-        body: { formData }
-      });
+      const { data, error } = await fetch(
+        "https://nzcfuusuxzdrqfaibgij.supabase.co/functions/v1/generate-story",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            formData: {
+              maleLead: {
+                name: maleLeadName,
+                personality: maleLeadPersonality,
+                appearance: maleLeadAppearance,
+                job: maleLeadJob,
+              },
+              femaleLead: {
+                name: femaleLeadName,
+                personality: femaleLeadPersonality,
+                appearance: femaleLeadAppearance,
+                job: femaleLeadJob,
+              },
+              story: {
+                plot: storyPlot,
+                fantasy: storyFantasies,
+                genre: storyGenre,
+                length: chapterLength,
+              },
+            },
+          }),
+        }
+      ).then((res) => res.json());
 
       if (error) throw error;
 
-      toast({
-        title: "Success!",
-        description: "Your story has been created.",
-      });
-
-      // Here you could redirect to a page showing the generated story
-      console.log('Generated story:', data.story);
-
+      // Navigate to the read story page with the generated story
+      navigate("/read-story", { state: { story: data.story } });
     } catch (error) {
-      console.error('Error generating story:', error);
+      console.error("Error generating story:", error);
       toast({
         title: "Error",
         description: "Failed to generate story. Please try again.",
@@ -110,176 +83,196 @@ const StoryForm = () => {
     }
   };
 
-  const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 3));
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-primary-light py-12 px-4">
-      <form onSubmit={handleSubmit} className="form-container">
-        <h1 className="text-3xl font-playfair font-bold text-primary-dark mb-8 text-center">
-          Create Your Story
-        </h1>
-
-        {currentStep === 1 && (
-          <div className="step-container">
-            <h2 className="text-xl font-playfair font-semibold text-primary mb-6">Male Lead Character</h2>
+    <div className="min-h-screen bg-[#1A1F2C] p-4">
+      <div className="max-w-4xl mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Male Lead Section */}
             <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-white">Male Lead</h2>
               <div>
-                <label className="form-label">Name</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.maleLead.name}
-                  onChange={(e) => handleInputChange('maleLead', 'name', e.target.value)}
+                <Label htmlFor="maleName" className="text-white">
+                  Name
+                </Label>
+                <Input
+                  id="maleName"
+                  value={maleLeadName}
+                  onChange={(e) => setMaleLeadName(e.target.value)}
+                  className="bg-white"
+                  required
                 />
               </div>
               <div>
-                <label className="form-label">Personality</label>
-                <textarea
-                  className="input-field"
-                  value={formData.maleLead.personality}
-                  onChange={(e) => handleInputChange('maleLead', 'personality', e.target.value)}
+                <Label htmlFor="malePersonality" className="text-white">
+                  Personality
+                </Label>
+                <Textarea
+                  id="malePersonality"
+                  value={maleLeadPersonality}
+                  onChange={(e) => setMaleLeadPersonality(e.target.value)}
+                  className="bg-white"
+                  required
                 />
               </div>
               <div>
-                <label className="form-label">Appearance</label>
-                <textarea
-                  className="input-field"
-                  value={formData.maleLead.appearance}
-                  onChange={(e) => handleInputChange('maleLead', 'appearance', e.target.value)}
+                <Label htmlFor="maleAppearance" className="text-white">
+                  Appearance
+                </Label>
+                <Textarea
+                  id="maleAppearance"
+                  value={maleLeadAppearance}
+                  onChange={(e) => setMaleLeadAppearance(e.target.value)}
+                  className="bg-white"
+                  required
                 />
               </div>
               <div>
-                <label className="form-label">Job</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.maleLead.job}
-                  onChange={(e) => handleInputChange('maleLead', 'job', e.target.value)}
+                <Label htmlFor="maleJob" className="text-white">
+                  Job
+                </Label>
+                <Input
+                  id="maleJob"
+                  value={maleLeadJob}
+                  onChange={(e) => setMaleLeadJob(e.target.value)}
+                  className="bg-white"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Female Lead Section */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-white">Female Lead</h2>
+              <div>
+                <Label htmlFor="femaleName" className="text-white">
+                  Name
+                </Label>
+                <Input
+                  id="femaleName"
+                  value={femaleLeadName}
+                  onChange={(e) => setFemaleLeadName(e.target.value)}
+                  className="bg-white"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="femalePersonality" className="text-white">
+                  Personality
+                </Label>
+                <Textarea
+                  id="femalePersonality"
+                  value={femaleLeadPersonality}
+                  onChange={(e) => setFemaleLeadPersonality(e.target.value)}
+                  className="bg-white"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="femaleAppearance" className="text-white">
+                  Appearance
+                </Label>
+                <Textarea
+                  id="femaleAppearance"
+                  value={femaleLeadAppearance}
+                  onChange={(e) => setFemaleLeadAppearance(e.target.value)}
+                  className="bg-white"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="femaleJob" className="text-white">
+                  Job
+                </Label>
+                <Input
+                  id="femaleJob"
+                  value={femaleLeadJob}
+                  onChange={(e) => setFemaleLeadJob(e.target.value)}
+                  className="bg-white"
+                  required
                 />
               </div>
             </div>
           </div>
-        )}
 
-        {currentStep === 2 && (
-          <div className="step-container">
-            <h2 className="text-xl font-playfair font-semibold text-primary mb-6">Female Lead Character</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="form-label">Name</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.femaleLead.name}
-                  onChange={(e) => handleInputChange('femaleLead', 'name', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Personality</label>
-                <textarea
-                  className="input-field"
-                  value={formData.femaleLead.personality}
-                  onChange={(e) => handleInputChange('femaleLead', 'personality', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Appearance</label>
-                <textarea
-                  className="input-field"
-                  value={formData.femaleLead.appearance}
-                  onChange={(e) => handleInputChange('femaleLead', 'appearance', e.target.value)}
-                />
-              </div>
+          {/* Story Details Section */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-white">Story Details</h2>
+            <div>
+              <Label htmlFor="plot" className="text-white">
+                Plot
+              </Label>
+              <Textarea
+                id="plot"
+                value={storyPlot}
+                onChange={(e) => setStoryPlot(e.target.value)}
+                className="bg-white"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="fantasies" className="text-white">
+                Fantasies
+              </Label>
+              <Textarea
+                id="fantasies"
+                value={storyFantasies}
+                onChange={(e) => setStoryFantasies(e.target.value)}
+                className="bg-white"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="genre" className="text-white">
+                Genre
+              </Label>
+              <Select
+                value={storyGenre}
+                onValueChange={(value) => setStoryGenre(value)}
+                required
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select genre" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="romance">Romance</SelectItem>
+                  <SelectItem value="erotica">Erotica</SelectItem>
+                  <SelectItem value="drama">Drama</SelectItem>
+                  <SelectItem value="fantasy">Fantasy</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="length" className="text-white">
+                Chapter Length (in words)
+              </Label>
+              <Select
+                value={chapterLength}
+                onValueChange={(value) => setChapterLength(value)}
+                required
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Select length" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="500">500 words</SelectItem>
+                  <SelectItem value="1000">1000 words</SelectItem>
+                  <SelectItem value="1500">1500 words</SelectItem>
+                  <SelectItem value="2000">2000 words</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        )}
 
-        {currentStep === 3 && (
-          <div className="step-container">
-            <h2 className="text-xl font-playfair font-semibold text-primary mb-6">Story Details</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="form-label">Title</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.story.title}
-                  onChange={(e) => handleInputChange('story', 'title', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Plot</label>
-                <textarea
-                  className="input-field"
-                  value={formData.story.plot}
-                  onChange={(e) => handleInputChange('story', 'plot', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Fantasy Elements</label>
-                <textarea
-                  className="input-field"
-                  value={formData.story.fantasy}
-                  onChange={(e) => handleInputChange('story', 'fantasy', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Genre</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  value={formData.story.genre}
-                  onChange={(e) => handleInputChange('story', 'genre', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="form-label">Length (in words)</label>
-                <input
-                  type="number"
-                  className="input-field"
-                  value={formData.story.length}
-                  onChange={(e) => handleInputChange('story', 'length', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-8 flex justify-between">
-          {currentStep > 1 && (
-            <button
-              type="button"
-              onClick={prevStep}
-              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-            >
-              Previous
-            </button>
-          )}
-          {currentStep < 3 ? (
-            <button
-              type="button"
-              onClick={nextStep}
-              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors ml-auto"
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors ml-auto disabled:opacity-50"
-            >
-              {isLoading ? "Creating Story..." : "Create Story"}
-            </button>
-          )}
-        </div>
-      </form>
+          <Button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700"
+            disabled={isLoading}
+          >
+            {isLoading ? "Generating Story..." : "Generate Story"}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 };
