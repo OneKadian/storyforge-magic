@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
 import {
   Select,
   SelectContent,
@@ -12,11 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useStorySubmission } from "@/hooks/useStorySubmission";
 
 const StoryForm = () => {
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
   const [maleLeadName, setMaleLeadName] = useState("");
   const [maleLeadPersonality, setMaleLeadPersonality] = useState("");
   const [maleLeadAppearance, setMaleLeadAppearance] = useState("");
@@ -30,63 +26,36 @@ const StoryForm = () => {
   const [storyGenre, setStoryGenre] = useState("");
   const [chapterLength, setChapterLength] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const { isLoading, handleSubmit } = useStorySubmission();
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await fetch(
-        "https://nzcfuusuxzdrqfaibgij.supabase.co/functions/v1/generate-story",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            formData: {
-              maleLead: {
-                name: maleLeadName,
-                personality: maleLeadPersonality,
-                appearance: maleLeadAppearance,
-                job: maleLeadJob,
-              },
-              femaleLead: {
-                name: femaleLeadName,
-                personality: femaleLeadPersonality,
-                appearance: femaleLeadAppearance,
-                job: femaleLeadJob,
-              },
-              story: {
-                plot: storyPlot,
-                fantasy: storyFantasies,
-                genre: storyGenre,
-                length: chapterLength,
-              },
-            },
-          }),
-        }
-      ).then((res) => res.json());
-
-      if (error) throw error;
-
-      // Navigate to the read story page with the generated story
-      navigate("/read-story", { state: { story: data.story } });
-    } catch (error) {
-      console.error("Error generating story:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate story. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await handleSubmit({
+      maleLead: {
+        name: maleLeadName,
+        personality: maleLeadPersonality,
+        appearance: maleLeadAppearance,
+        job: maleLeadJob,
+      },
+      femaleLead: {
+        name: femaleLeadName,
+        personality: femaleLeadPersonality,
+        appearance: femaleLeadAppearance,
+        job: femaleLeadJob,
+      },
+      story: {
+        plot: storyPlot,
+        fantasy: storyFantasies,
+        genre: storyGenre,
+        length: chapterLength,
+      },
+    });
   };
 
   return (
     <div className="min-h-screen bg-[#1A1F2C] p-4">
       <div className="max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={onSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Male Lead Section */}
             <div className="space-y-4">
